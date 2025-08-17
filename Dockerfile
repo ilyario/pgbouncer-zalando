@@ -3,6 +3,8 @@ FROM --platform=linux/amd64 registry.opensource.zalan.do/acid/pgbouncer:${PGBOUN
 
 ARG SSL_MODE=prefer
 
-# Заменяем server_tls_sslmode в шаблоне конфигурации
+# Заменяем server_tls_sslmode и client_tls_sslmode в шаблоне конфигурации
 RUN sed -i "s/^server_tls_sslmode[[:space:]]*=[[:space:]]*.*/server_tls_sslmode = ${SSL_MODE}/" /etc/pgbouncer/pgbouncer.ini.tmpl && \
-    grep "server_tls_sslmode = ${SSL_MODE}" /etc/pgbouncer/pgbouncer.ini.tmpl || (echo "Failed to update server_tls_sslmode" && exit 1)
+    sed -i "s/^client_tls_sslmode[[:space:]]*=[[:space:]]*.*/client_tls_sslmode = ${SSL_MODE}/" /etc/pgbouncer/pgbouncer.ini.tmpl && \
+    grep "server_tls_sslmode = ${SSL_MODE}" /etc/pgbouncer/pgbouncer.ini.tmpl && \
+    grep "client_tls_sslmode = ${SSL_MODE}" /etc/pgbouncer/pgbouncer.ini.tmpl || (echo "Failed to update SSL modes" && exit 1)
