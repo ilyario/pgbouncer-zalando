@@ -3,4 +3,4 @@ FROM registry.opensource.zalan.do/acid/pgbouncer:${PGBOUNCER_VERSION}
 
 ARG SSL_MODE=prefer
 
-RUN sed -i '/#/!s/\(tls_sslmode[[:space:]]*=[[:space:]]*\)\(.*\)/\1${SSL_MODE}/' /etc/pgbouncer/pgbouncer.ini.tmpl
+RUN sed -i '/#/!s/\(server_tls_sslmode[[:space:]]*=[[:space:]]*\)\(.*\)/\1${SSL_MODE}/' /etc/pgbouncer/pgbouncer.ini.tmpl
