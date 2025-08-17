@@ -1,0 +1,7 @@
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  DEFAULT_PGBOUNCER_VERSION: master-32
+  SSL_MODE: prefer
+  DOCKER_BUILDKIT: 1
+  TEST_TIMEOUT: 30

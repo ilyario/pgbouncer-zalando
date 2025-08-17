@@ -1,0 +1,76 @@
+name: Update PgBouncer Version
+
+on:
+  schedule:
+    # Запуск каждый день в 3:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Get latest PgBouncer version from registry
+      id: get-version
+      run: |
+        # Get latest tags from registry.opensource.zalan.do/acid/pgbouncer
+        LATEST_VERSION=$(curl -s "https://registry.opensource.zalan.do/v2/acid/pgbouncer/tags/list" | jq -r '.tags[]' | grep -E '^(master|v[0-9])' | sort -V | tail -n 1)
+
+        if [ -z "$LATEST_VERSION" ]; then
+          echo "Failed to get latest version, using default"
+          LATEST_VERSION="master-32"
+        fi
+
+        echo "Latest version: $LATEST_VERSION"
+        echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Check if version changed
+      id: check-change
+      run: |
+        CURRENT_VERSION=$(grep 'ARG PGBOUNCER_VERSION=' Dockerfile | cut -d'=' -f2)
+        LATEST_VERSION="${{ steps.get-version.outputs.version }}"
+
+        echo "Current version: $CURRENT_VERSION"
+        echo "Latest version: $LATEST_VERSION"
+
+        if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+          echo "Version changed from $CURRENT_VERSION to $LATEST_VERSION"
+          echo "changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "No version change detected"
+          echo "changed=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create Pull Request for version update
+      if: steps.check-change.outputs.changed == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "chore: update PgBouncer version to ${{ steps.get-version.outputs.version }}"
+        title: "🔄 Update PgBouncer version to ${{ steps.get-version.outputs.version }}"
+        body: |
+          ## 🔄 Automatic PgBouncer Version Update
+
+          **Changes:**
+          - Updated PgBouncer version from `${{ steps.check-change.outputs.current }}` to `${{ steps.get-version.outputs.version }}`
+
+          **Trigger:** Automatic update by schedule
+
+          ---
+
+          *This PR was created automatically by CI/CD system*
+        branch: update-pgbouncer-version
+        delete-branch: true
+        path: .
+        committer: GitHub <noreply@github.com>
+        author: GitHub <noreply@github.com>
+        base: main
