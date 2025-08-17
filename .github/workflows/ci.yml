@@ -70,6 +70,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
+        platforms: linux/amd64,linux/arm64
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
@@ -84,6 +85,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
         build-args: |
@@ -124,6 +126,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
+        platforms: linux/amd64
         push: false
         tags: test-pgbouncer:latest
         build-args: |
@@ -133,7 +136,13 @@ jobs:
     - name: Test PgBouncer container
       run: |
         # Start container in background
-        docker run -d --name test-pgbouncer test-pgbouncer:latest
+        docker run -d --name test-pgbouncer \
+          -e POSTGRES_HOST=localhost \
+          -e POSTGRES_PORT=5432 \
+          -e POSTGRES_DB=postgres \
+          -e POSTGRES_USER=postgres \
+          -e POSTGRES_PASSWORD=postgres \
+          test-pgbouncer:latest
 
         # Wait a bit for startup
         sleep 10
@@ -141,6 +150,14 @@ jobs:
         # Check if container is running
         if docker ps | grep -q test-pgbouncer; then
           echo "✅ PgBouncer container is running successfully"
+
+          # Check configuration
+          echo "📋 Checking configuration..."
+          docker exec test-pgbouncer cat /etc/pgbouncer/pgbouncer.ini | grep server_tls_sslmode || echo "⚠️ server_tls_sslmode not found in config"
+
+          # Check logs for any errors
+          echo "📋 Recent logs:"
+          docker logs test-pgbouncer --tail 10
         else
           echo "❌ PgBouncer container failed to start"
           docker logs test-pgbouncer
